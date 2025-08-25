@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Beat Maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c); color: white; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: rgba(0, 0, 0, 0.85); border-radius: 15px; padding: 20px; }
+        h1 { text-align: center; background: linear-gradient(to right, #ff8a00, #da1b60); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        button { padding: 15px 20px; font-size: 1rem; border: none; border-radius: 50px; cursor: pointer; width: 100%; margin: 10px 0; }
+        #recordBtn { background: linear-gradient(to right, #ff416c, #ff4b2b); color: white; }
+        #playBtn { background: linear-gradient(to right, #2193b0, #6dd5ed); color: white; }
+        #exportBtn { background: linear-gradient(to right, #834d9b, #d04ed6); color: white; }
+        .genre-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0; }
+        .genre-card { background: rgba(50, 50, 80, 0.7); border-radius: 10px; padding: 15px; text-align: center; cursor: pointer; }
+        .genre-card.selected { border: 2px solid #ff8a00; background: rgba(90, 90, 150, 0.9); }
+        .status { text-align: center; padding: 15px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; margin: 20px 0; min-height: 60px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice Beat Maker</h1>
+        <div class="status" id="status">Ready to record. Click "Record Voice" to start.</div>
+        
+        <button id="recordBtn">🎤 Record Voice (5s)</button>
+        <button id="playBtn" disabled>▶️ Play Generated Song</button>
+        <button id="exportBtn" disabled>💾 Export as MP3</button>
+        
+        <h2>Choose Genre</h2>
+        <div class="genre-grid" id="genreGrid"></div>
+    </div>
+
+    <script>
+        const genres = [
+            { id: 'pop', name: 'Pop', tempo: 120 },
+            { id: 'hiphop', name: 'Hip-Hop', tempo: 85 },
+            { id: 'edm', name: 'EDM', tempo: 128 },
+            { id: 'rock', name: 'Rock', tempo: 110 }
+        ];
+        
+        let selectedGenre = 'pop';
+        let mediaRecorder;
+        let audioChunks = [];
+        
+        function initGenreGrid() {
+            const grid = document.getElementById('genreGrid');
+            grid.innerHTML = '';
+            genres.forEach(genre => {
+                const card = document.createElement('div');
+                card.className = 'genre-card';
+                if (genre.id === selectedGenre) card.classList.add('selected');
+                card.textContent = genre.name;
+                card.onclick = () => {
+                    document.querySelectorAll('.genre-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedGenre = genre.id;
+                };
+                grid.appendChild(card);
+            });
+        }
+        
+        document.getElementById('recordBtn').onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('status').textContent = 'Voice recorded! Click "Play Generated Song"';
+            };
+            
+            mediaRecorder.start();
+            document.getElementById('status').textContent = 'Recording... Speak for 5 seconds';
+            
+            setTimeout(() => mediaRecorder.stop(), 5000);
+        };
+        
+        document.getElementById('playBtn').onclick = () => {
+            const genre = genres.find(g => g.id === selectedGenre);
+            Tone.Transport.bpm.value = genre.tempo;
+            
+            const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            const chords = ['C4', 'G4', 'Am4', 'F4'];
+            const chordSeq = new Tone.Sequence((time, chord) => {
+                synth.triggerAttackRelease(chord, "2n", time);
+            }, chords, "4n");
+            
+            chordSeq.start(0);
+            Tone.Transport.start();
+            
+            document.getElementById('status').textContent = `Playing ${genre.name} song!`;
+            document.getElementById('exportBtn').disabled = false;
+        };
+        
+        document.getElementById('exportBtn').onclick = () => {
+            document.getElementById('status').textContent = 'Export feature would work here';
+        };
+        
+        initGenreGrid();
+    </script>
+</body>
+</html>
